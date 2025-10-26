@@ -146,7 +146,7 @@ if st.button("Reset"):
         "gps_lat": None, "gps_lon": None, "gps_alt": None,
         "Y_manual": 0, "Z_manual": 0, "X_manual": 0
     })
-    st.experimental_rerun()
+    st.rerun()
 
 # --- Ophalen GPS realtime ---
 loc = streamlit_geolocation._streamlit_geolocation(key="geo")
@@ -225,4 +225,5 @@ if mode == "Alleen handmatig":
             st.success(f"PPM = {ppm} ppm")
         else:
             st.error("Y-coördinaat buiten bereik (21.000 - 242.000 m).")
+
 
