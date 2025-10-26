@@ -13,7 +13,7 @@ Y_vals = [242000,238000,234000,230000,226000,221000,217000,212000,
           141000,138000,132000,123000,113000,104000,95000,86000,
           76000,67000,58000,49000,39500,30500,21000]
 
-# PPM-berekeningsfunctie
+# --- PPM Berekeningsfunctie ---
 def bereken_ppm_be(Y, Z):
     if Y > Y_vals[0] or Y < Y_vals[-1]:
         st.warning("Y-coördinaat buiten bereik (21000 - 242000)")
@@ -117,46 +117,27 @@ def bereken_ppm_be(Y, Z):
 
     return round(Yppm + Zppm)
 
-# Keuze: GPS of Handmatig
-use_gps = st.checkbox("Gebruik GPS-locatie?", value=True)
+# --- Keuze: GPS of Handmatig ---
+use_gps = st.checkbox("Gebruik GPS-locatie?", value=False)
 
 if use_gps:
     coords = st_javascript("navigator.geolocation.getCurrentPosition(pos => pos.coords)")
     if coords:
         lat = coords['latitude']
         lon = coords['longitude']
-
-        # Omzetten naar RD72 Y/Z
         transformer = Transformer.from_crs("EPSG:4326", "EPSG:31370")
         Y_be, Z_be = transformer.transform(lat, lon)
         Y_be = round(Y_be, 0)
         Z_be = round(Z_be, 0)
-
-        st.subheader("Coördinaten")
-        st.write(f"GPS Latitude: {lat:.6f}")
-        st.write(f"GPS Longitude: {lon:.6f}")
-        st.write(f"RD-coördinaat Y: {Y_be}")
-        st.write(f"RD-coördinaat Z: {Z_be}")
-
-        # Optioneel: handmatige X-aanpassing
-        X_manual = st.number_input("Handmatige X-coördinaat (optioneel)", value=0, step=1000)
-
-        # Berekening
         ppm_value = bereken_ppm_be(Y_be, Z_be)
         if ppm_value is not None:
-            st.success(f"PPM op basis van GPS + X-aanpassing: {ppm_value} ppm")
-
-            # Kaart
+            st.success(f"PPM op basis van GPS: {ppm_value} ppm")
             m = folium.Map(location=[lat, lon], zoom_start=14)
             folium.Marker([lat, lon], tooltip=f"PPM: {ppm_value}").add_to(m)
             st_folium(m, width=700, height=500)
-
 else:
-    # Handmatige invoer Y/Z
     Y_manual = st.number_input("Handmatige Y-coördinaat", value=0, step=1000)
     Z_manual = st.number_input("Handmatige Z-coördinaat", value=0, step=10)
-    X_manual = st.number_input("Handmatige X-coördinaat (optioneel)", value=0, step=1000)
-
     if st.button("Bereken PPM"):
         ppm_value = bereken_ppm_be(Y_manual, Z_manual)
         if ppm_value is not None:
