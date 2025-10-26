@@ -1,4 +1,5 @@
 streamlit
 pyproj
-streamlit-folium
-streamlit-javascript
+streamlit_geolocation
+streamlit_folium
+
