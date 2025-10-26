@@ -7,12 +7,12 @@ from streamlit_folium import st_folium
 import time
 
 st.set_page_config(page_title="PPM België Realtime GPS", layout="centered")
-st.title("🇧🇪 PPM België — Realtime GPS + Lambert72 (RD)")
+st.title("🇧🇪 PPM België")
 
 st.markdown("""
 De marker op de kaart volgt je GPS-locatie.  
 PPM wordt **realtime bijgewerkt** als je GPS beweegt.  
-Handmatige invoer werkt naast GPS, berekening gebeurt pas bij **bereken PPM**.
+Handmatige invoer werkt naast GPS, berekening gebeurt pas bij "**bereken PPM**".
 """)
 
 # --- Lambert72 transformer ---
@@ -138,7 +138,7 @@ Z_manual = st.number_input("Z (hoogte, m)", value=st.session_state["Z_manual"], 
 X_manual = st.number_input("X (Easting, m, optioneel)", value=st.session_state["X_manual"], step=1000)
 
 # --- Modus keuze (GPS of handmatig) ---
-mode = st.radio("Welke invoer wil je gebruiken?", ("Alleen GPS", "Alleen handmatig"))
+mode = st.radio("Welke invoer wil je gebruiken?", ("GPS", "Manueel"))
 
 # --- Reset knop ---
 if st.button("Reset"):
@@ -146,7 +146,7 @@ if st.button("Reset"):
         "gps_lat": None, "gps_lon": None, "gps_alt": None,
         "Y_manual": 0, "Z_manual": 0, "X_manual": 0
     })
-    st.experimental_rerun()
+    st.rerun()
 
 # --- Ophalen GPS realtime ---
 loc = streamlit_geolocation._streamlit_geolocation(key="geo")
@@ -166,38 +166,38 @@ if used_lat is not None:
     rd_x = int(rd_x)
     rd_y = int(rd_y)
 
-if mode == "Alleen GPS":
+if mode == "GPS":
     if rd_x is None:
         st.warning("Geen GPS beschikbaar. Schakel over naar handmatige invoer.")
         st.stop()
     X_used = rd_x
     Y_used = rd_y
     Z_used = int(alt if alt is not None else 0)
-else:  # Alleen handmatig
+else:  # Manueel
     X_used = int(X_manual)
     Y_used = int(Y_manual)
     Z_used = int(Z_manual)
 
 # --- Tonen coördinaten ---
-st.subheader("Gekozen coördinaten")
+st.subheader("Gebruikte coördinaten")
 cols = st.columns(2)
 with cols[0]:
     st.write("**WGS84 (GPS)**")
-    if used_lat and mode=="Alleen GPS":
+    if used_lat and mode=="GPS":
         st.write(f"Latitude: {used_lat:.6f}")
         st.write(f"Longitude: {used_lon:.6f}")
         st.write(f"Altitude: {alt}")
     else:
         st.write("Geen GPS gebruikt")
 with cols[1]:
-    st.write("**Lambert72 / RD (m)**")
+    st.write("**Lambert72(m)**")
     st.write(f"X = {X_used}")
     st.write(f"Y = {Y_used}")
     st.write(f"Z = {Z_used}")
 
 # --- Kaart realtime ---
 st.subheader("Locatiekaart")
-if used_lat and mode=="Alleen GPS":
+if used_lat and mode=="GPS":
     m = folium.Map(location=[used_lat, used_lon], zoom_start=17, tiles=None)
     folium.TileLayer('CartoDB positron', name="CartoDB Positron", control=False).add_to(m)
 
@@ -210,7 +210,7 @@ if used_lat and mode=="Alleen GPS":
     st_folium(m, width=350, height=350)
 
 # --- Realtime PPM bij GPS ---
-if mode == "Alleen GPS" and used_lat:
+if mode == "GPS" and used_lat:
     ppm = bereken_ppm_belgie_from_YZ(Y_used, Z_used)
     if ppm is not None:
         st.success(f"Realtime PPM = {ppm} ppm")
@@ -218,10 +218,11 @@ if mode == "Alleen GPS" and used_lat:
         st.error("Y-coördinaat buiten bereik (21.000 - 242.000 m).")
 
 # --- PPM knop voor handmatige invoer ---
-if mode == "Alleen handmatig":
+if mode == "Manueel":
     if st.button("Bereken PPM"):
         ppm = bereken_ppm_belgie_from_YZ(Y_used, Z_used)
         if ppm is not None:
             st.success(f"PPM = {ppm} ppm")
         else:
             st.error("Y-coördinaat buiten bereik (21.000 - 242.000 m).")
+
