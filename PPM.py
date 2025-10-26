@@ -1,4 +1,4 @@
-# ppm_belgie_app_realtime.py
+# ppm_belgie_realtime_final.py
 import streamlit as st
 import streamlit_geolocation
 from pyproj import Transformer
@@ -11,8 +11,8 @@ st.title("🇧🇪 PPM België — Realtime GPS + Lambert72 (RD)")
 
 st.markdown("""
 De marker op de kaart volgt je GPS-locatie.  
-PPM wordt berekend met de **originele Belgische formule** zoals in Delphi.  
-Handmatige invoer werkt naast GPS.
+PPM wordt **realtime bijgewerkt** als je GPS beweegt.  
+Handmatige invoer werkt naast GPS, berekening gebeurt pas bij **bereken PPM**.
 """)
 
 # --- Lambert72 transformer ---
@@ -20,19 +20,15 @@ transformer = Transformer.from_crs("EPSG:4326", "EPSG:31370", always_xy=True)
 
 # --- Originele PPM functie België ---
 def bereken_ppm_belgie_from_YZ(Y, Z):
-    # Y-tabellen
     Y_vals = [
         242000,238000,234000,230000,226000,221000,217000,212000,
         207000,201000,195000,188000,180000,171000,157000,151000,
         141000,138000,132000,123000,113000,104000,95000,86000,
         76000,67000,58000,49000,39500,30500,21000
     ]
-    # Z-tabellen
-    Z_vals = [0,10,50,100,150,200,250,300,350,400,450,500,550,600,650,700]
-
-    # #### Berekening Yppm volgens originele Delphi logica ####
     if Y > Y_vals[0] or Y < Y_vals[-1]:
-        return None  # buiten bereik
+        return None
+    # Originele Yppm berekening
     if Y >= Y_vals[1] and Y <= Y_vals[0]:
         Yppm = (Y - Y_vals[1])*10/4000 + 70
     elif Y >= Y_vals[2] and Y < Y_vals[1]:
@@ -94,7 +90,7 @@ def bereken_ppm_belgie_from_YZ(Y, Z):
     else:
         Yppm = (Y - Y_vals[30])*(-24)/9500 + 84
 
-    # #### Berekening Zppm ####
+    # Zppm
     if Z <= 10 and Z >= 0:
         Zppm = (10 - Z)*2/10 -2
     elif Z <= 50:
@@ -126,10 +122,9 @@ def bereken_ppm_belgie_from_YZ(Y, Z):
     elif Z <= 700:
         Zppm = (700 - Z)*8/50 -110
     else:
-        Zppm = -110  # hoger dan tabel
+        Zppm = -110
 
     return int(Yppm + Zppm)
-
 
 # --- Session state initiëren ---
 for key in ["gps_lat", "gps_lon", "gps_alt", "Y_manual", "Z_manual", "X_manual"]:
@@ -142,8 +137,8 @@ Y_manual = st.number_input("Y (Northing, m)", value=st.session_state["Y_manual"]
 Z_manual = st.number_input("Z (hoogte, m)", value=st.session_state["Z_manual"], step=1)
 X_manual = st.number_input("X (Easting, m, optioneel)", value=st.session_state["X_manual"], step=1000)
 
-# --- Modus keuze ---
-mode = st.radio("Welke invoer wil je gebruiken?", ("Alleen GPS", "Alleen handmatig", "Combinatie"))
+# --- Modus keuze (GPS of handmatig) ---
+mode = st.radio("Welke invoer wil je gebruiken?", ("Alleen GPS", "Alleen handmatig"))
 
 # --- Reset knop ---
 if st.button("Reset"):
@@ -151,9 +146,9 @@ if st.button("Reset"):
         "gps_lat": None, "gps_lon": None, "gps_alt": None,
         "Y_manual": 0, "Z_manual": 0, "X_manual": 0
     })
-    st.rerun()
+    st.experimental_rerun()
 
-# --- Ophalen GPS realtime (1x per 2 sec) ---
+# --- Ophalen GPS realtime ---
 loc = streamlit_geolocation._streamlit_geolocation(key="geo")
 if loc and loc.get("latitude") and loc.get("longitude"):
     st.session_state["gps_lat"] = loc["latitude"]
@@ -178,21 +173,17 @@ if mode == "Alleen GPS":
     X_used = rd_x
     Y_used = rd_y
     Z_used = int(alt if alt is not None else 0)
-elif mode == "Alleen handmatig":
+else:  # Alleen handmatig
     X_used = int(X_manual)
     Y_used = int(Y_manual)
     Z_used = int(Z_manual)
-else:  # Combinatie
-    X_used = int(X_manual) if X_manual != 0 else (rd_x if rd_x else 0)
-    Y_used = int(Y_manual) if Y_manual != 0 else (rd_y if rd_y else 0)
-    Z_used = int(Z_manual) if Z_manual != 0 else (alt if alt else 0)
 
 # --- Tonen coördinaten ---
 st.subheader("Gekozen coördinaten")
 cols = st.columns(2)
 with cols[0]:
     st.write("**WGS84 (GPS)**")
-    if used_lat:
+    if used_lat and mode=="Alleen GPS":
         st.write(f"Latitude: {used_lat:.6f}")
         st.write(f"Longitude: {used_lon:.6f}")
         st.write(f"Altitude: {alt}")
@@ -204,21 +195,33 @@ with cols[1]:
     st.write(f"Y = {Y_used}")
     st.write(f"Z = {Z_used}")
 
-# --- Kaart realtime --- 
-st.subheader("Locatiekaart (Realtime)")
-if used_lat:
-    m = folium.Map(location=[used_lat, used_lon], zoom_start=17)
+# --- Kaart realtime ---
+st.subheader("Locatiekaart")
+if used_lat and mode=="Alleen GPS":
+    m = folium.Map(location=[used_lat, used_lon], zoom_start=17, tiles=None)
+    folium.TileLayer('CartoDB positron', name="CartoDB Positron", control=False).add_to(m)
+
+#    m = folium.Map(location=[used_lat, used_lon], zoom_start=17)
     folium.Marker(
         [used_lat, used_lon],
         popup=f"X={X_used}, Y={Y_used}, Z={Z_used}",
         tooltip="Jouw locatie"
     ).add_to(m)
-    st_data = st_folium(m, width=350, height=350)
+    st_folium(m, width=350, height=350)
 
-# --- PPM berekening pas bij knopdruk ---
-if st.button("Bereken PPM"):
+# --- Realtime PPM bij GPS ---
+if mode == "Alleen GPS" and used_lat:
     ppm = bereken_ppm_belgie_from_YZ(Y_used, Z_used)
-    if ppm is None:
-        st.error("Y-coördinaat buiten bereik (21.000 - 242.000 m).")
+    if ppm is not None:
+        st.success(f"Realtime PPM = {ppm} ppm")
     else:
-        st.success(f"PPM = {ppm} ppm")
+        st.error("Y-coördinaat buiten bereik (21.000 - 242.000 m).")
+
+# --- PPM knop voor handmatige invoer ---
+if mode == "Alleen handmatig":
+    if st.button("Bereken PPM"):
+        ppm = bereken_ppm_belgie_from_YZ(Y_used, Z_used)
+        if ppm is not None:
+            st.success(f"PPM = {ppm} ppm")
+        else:
+            st.error("Y-coördinaat buiten bereik (21.000 - 242.000 m).")
