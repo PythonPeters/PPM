@@ -198,7 +198,7 @@ with cols[1]:
 # --- Kaart realtime ---
 st.subheader("Locatiekaart")
 if used_lat and mode=="GPS":
-    m = folium.Map(location=[used_lat, used_lon], zoom_start=12, tiles=None)
+    m = folium.Map(location=[used_lat, used_lon], zoom_start=14, tiles=None)
     folium.TileLayer('CartoDB positron', name="CartoDB Positron", control=False).add_to(m)
 
 #    m = folium.Map(location=[used_lat, used_lon], zoom_start=17)
