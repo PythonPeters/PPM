@@ -10,7 +10,7 @@ st.set_page_config(page_title="PPM België Realtime GPS", layout="centered")
 st.title("🇧🇪 PPM België")
 
 st.markdown(""" 
-PPM wordt berekend op basis van je GPS-locatie.  
+PPM wordt berekend op basis van de GPS-locatie.  
 Handmatig, berekening na "**bereken PPM**".
 """)
 
