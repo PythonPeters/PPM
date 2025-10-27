@@ -9,10 +9,9 @@ import time
 st.set_page_config(page_title="PPM België Realtime GPS", layout="centered")
 st.title("🇧🇪 PPM België")
 
-st.markdown("""
-De marker op de kaart volgt je GPS-locatie.  
-PPM wordt **realtime bijgewerkt** als je GPS beweegt.  
-Handmatige invoer werkt naast GPS, berekening gebeurt pas bij "**bereken PPM**".
+st.markdown(""" 
+PPM wordt **realtime bijgewerkt** op basis van je locatie.  
+Handmatig, berekening na "**bereken PPM**".
 """)
 
 # --- Lambert72 transformer ---
